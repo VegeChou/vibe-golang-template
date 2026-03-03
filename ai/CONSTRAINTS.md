@@ -26,6 +26,20 @@
 - Standard validation commands: `make fmt test check`.
 - Run pre-commit checks before pushing (`.githooks/pre-commit`).
 
+## API Rules
+For any API/backend/frontend generation task, MUST read:
+- `LLM_RULES.md`
+- `rules/unified-api.openapi.yaml`
+- `rules/unified-api.human.md`
+
+Requirements:
+- Follow ApiResponse/ErrorCode/pagination/i18n/security/versioning/testing rules exactly.
+- Do not invent response envelope fields or error codes outside OpenAPI definitions.
+- If API contract changes, update OpenAPI first, then run:
+  `bash scripts/sync-api-docs.sh`
+- If upstream `vibe-specs` is updated and user asks to sync, run:
+  `make update-specs` (or `bash scripts/update-vibe-specs.sh`)
+
 ## Agent-Specific Notes
 - Claude Code: prefer small diffs and provide a concise diff summary.
 - Codex: keep layering clear and change the smallest possible file set.

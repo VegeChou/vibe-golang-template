@@ -2,7 +2,4 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-git config core.hooksPath .githooks
-chmod +x "$ROOT_DIR/.githooks/pre-commit"
-echo "git hooks installed (.githooks)"
+bash "$ROOT_DIR/scripts/install-githooks.sh"

@@ -1,0 +1,28 @@
+name: Verify API Doc Sync
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync human-readable API docs
+        run: bash scripts/sync-api-docs.sh
+
+      - name: Ensure generated docs are committed
+        run: |
+          if ! git diff --exit-code -- rules/unified-api.human.md; then
+            echo "rules/unified-api.human.md is out of sync."
+            echo "Run: bash scripts/sync-api-docs.sh"
+            exit 1
+          fi
+
