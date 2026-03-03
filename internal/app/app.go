@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"vibe-golang-template/internal/config"
-	"vibe-golang-template/internal/handler"
+	"vibe-golang-template/internal/controller"
 	"vibe-golang-template/internal/i18n"
 	"vibe-golang-template/internal/repository/memory"
 	"vibe-golang-template/internal/service"
@@ -26,7 +26,7 @@ func NewServer(cfg config.Config) (*Server, error) {
 
 	userRepo := memory.NewUserRepository()
 	userService := service.NewUserService(userRepo)
-	api := handler.NewAPI(userService)
+	api := controller.NewAPI(userService)
 
 	mux := http.NewServeMux()
 	api.RegisterRoutes(mux)
