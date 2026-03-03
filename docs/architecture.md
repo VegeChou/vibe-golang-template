@@ -10,3 +10,5 @@
 
 This template uses an in-memory repository for demonstration. Replace implementations under `internal/repository` with MySQL/PostgreSQL/Redis adapters for production use.
 HTTP handlers return the unified `ApiResponse` envelope (success/code/message/lang/data/traceId/timestamp) with language resolved by `Accept-Language` then `lang` query fallback.
+Request parsing follows unified conventions (`page/size` and `cursor/limit`, with default and max validation), and global panic recovery middleware maps unexpected failures to unified `ApiErrorResponse`.
+Localization messages are resolved by key from `configs/i18n.json` (`I18N_FILE`), instead of hardcoding bilingual strings in handlers.

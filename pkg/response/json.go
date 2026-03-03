@@ -4,8 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,21 +29,107 @@ const (
 	LangEnUS    = "en-US"
 )
 
-type APIResponse struct {
+type APIResponse[T any] struct {
 	Success   bool      `json:"success"`
 	Code      ErrorCode `json:"code"`
 	Message   string    `json:"message"`
 	Lang      string    `json:"lang"`
-	Data      any       `json:"data"`
+	Data      T         `json:"data"`
 	TraceID   string    `json:"traceId"`
 	Timestamp string    `json:"timestamp"`
 }
 
-func Message(lang, en, zh string) string {
-	if lang == LangZhCN {
-		return zh
+type Translator interface {
+	Translate(lang, key string) string
+}
+
+type mapTranslator struct {
+	messages map[string]map[string]string
+}
+
+func (m *mapTranslator) Translate(lang, key string) string {
+	if langMap, ok := m.messages[lang]; ok {
+		if message, ok := langMap[key]; ok {
+			return message
+		}
 	}
-	return en
+	if defaultMap, ok := m.messages[DefaultLang]; ok {
+		if message, ok := defaultMap[key]; ok {
+			return message
+		}
+	}
+	return key
+}
+
+var (
+	translatorMu sync.RWMutex
+	translator   Translator = &mapTranslator{messages: map[string]map[string]string{
+		LangEnUS: {
+			"common.success":             "success",
+			"error.method_not_allowed":   "method not allowed",
+			"error.invalid_json_body":    "invalid json body",
+			"error.json_single_object":   "json body must contain a single object",
+			"error.page_invalid":         "page must be an integer >= 1",
+			"error.size_invalid":         "size must be an integer between 1 and 100",
+			"error.limit_invalid":        "limit must be an integer between 1 and 100",
+			"error.cursor_page_conflict": "cursor and page cannot be used together",
+			"error.invalid_user_input":   "invalid user input",
+			"error.internal":             "internal error",
+		},
+		LangZhCN: {
+			"common.success":             "成功",
+			"error.method_not_allowed":   "请求方法不允许",
+			"error.invalid_json_body":    "JSON 请求体无效",
+			"error.json_single_object":   "JSON 请求体只能包含一个对象",
+			"error.page_invalid":         "page 必须是大于等于 1 的整数",
+			"error.size_invalid":         "size 必须是 1 到 100 之间的整数",
+			"error.limit_invalid":        "limit 必须是 1 到 100 之间的整数",
+			"error.cursor_page_conflict": "cursor 与 page 不能同时使用",
+			"error.invalid_user_input":   "用户输入不合法",
+			"error.internal":             "系统内部错误",
+		},
+	}}
+)
+
+type APIError struct {
+	Status     int
+	Code       ErrorCode
+	MessageKey string
+}
+
+func (e *APIError) Error() string {
+	return e.MessageKey
+}
+
+func (e *APIError) Message(lang string) string {
+	return Translate(lang, e.MessageKey)
+}
+
+func NewAPIError(status int, code ErrorCode, messageKey string) *APIError {
+	return &APIError{Status: status, Code: code, MessageKey: messageKey}
+}
+
+func InvalidParamError(messageKey string) *APIError {
+	return NewAPIError(http.StatusBadRequest, CodeCommonInvalidParam, messageKey)
+}
+
+func InternalError(messageKey string) *APIError {
+	return NewAPIError(http.StatusInternalServerError, CodeInternalError, messageKey)
+}
+
+func SetTranslator(t Translator) {
+	if t == nil {
+		return
+	}
+	translatorMu.Lock()
+	defer translatorMu.Unlock()
+	translator = t
+}
+
+func Translate(lang, key string) string {
+	translatorMu.RLock()
+	defer translatorMu.RUnlock()
+	return translator.Translate(lang, key)
 }
 
 func ResolveLang(r *http.Request) string {
@@ -61,8 +149,8 @@ func ResolveLang(r *http.Request) string {
 	return DefaultLang
 }
 
-func Write(w http.ResponseWriter, r *http.Request, status int, success bool, code ErrorCode, message string, data any) {
-	body := APIResponse{
+func Write[T any](w http.ResponseWriter, r *http.Request, status int, success bool, code ErrorCode, message string, data T) {
+	body := APIResponse[T]{
 		Success:   success,
 		Code:      code,
 		Message:   message,
@@ -77,12 +165,24 @@ func Write(w http.ResponseWriter, r *http.Request, status int, success bool, cod
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-func Success(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
-	Write(w, r, status, true, CodeOK, message, data)
+func Success[T any](w http.ResponseWriter, r *http.Request, status int, data T, messageKey string) {
+	lang := ResolveLang(r)
+	Write(w, r, status, true, CodeOK, Translate(lang, messageKey), data)
 }
 
-func Error(w http.ResponseWriter, r *http.Request, status int, code ErrorCode, message string) {
-	Write(w, r, status, false, code, message, nil)
+func Error(w http.ResponseWriter, r *http.Request, status int, code ErrorCode, messageKey string) {
+	lang := ResolveLang(r)
+	Write[any](w, r, status, false, code, Translate(lang, messageKey), nil)
+}
+
+func WriteErrorFrom(w http.ResponseWriter, r *http.Request, err error) {
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		Error(w, r, apiErr.Status, apiErr.Code, apiErr.MessageKey)
+		return
+	}
+
+	Error(w, r, http.StatusInternalServerError, CodeInternalError, "error.internal")
 }
 
 func traceIDFromRequest(r *http.Request) string {

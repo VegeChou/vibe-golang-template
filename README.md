@@ -96,3 +96,6 @@ This injects the same unified API rule assets and LLM rule references into the t
 ## Environment Variables
 
 See [configs/config.example.env](configs/config.example.env).
+Key variables:
+- `HTTP_ADDR` HTTP bind address.
+- `I18N_FILE` i18n message catalog path (default `configs/i18n.json`).

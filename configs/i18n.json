@@ -1,0 +1,26 @@
+{
+  "en-US": {
+    "common.success": "success",
+    "error.method_not_allowed": "method not allowed",
+    "error.invalid_json_body": "invalid json body",
+    "error.json_single_object": "json body must contain a single object",
+    "error.page_invalid": "page must be an integer >= 1",
+    "error.size_invalid": "size must be an integer between 1 and 100",
+    "error.limit_invalid": "limit must be an integer between 1 and 100",
+    "error.cursor_page_conflict": "cursor and page cannot be used together",
+    "error.invalid_user_input": "invalid user input",
+    "error.internal": "internal error"
+  },
+  "zh-CN": {
+    "common.success": "成功",
+    "error.method_not_allowed": "请求方法不允许",
+    "error.invalid_json_body": "JSON 请求体无效",
+    "error.json_single_object": "JSON 请求体只能包含一个对象",
+    "error.page_invalid": "page 必须是大于等于 1 的整数",
+    "error.size_invalid": "size 必须是 1 到 100 之间的整数",
+    "error.limit_invalid": "limit 必须是 1 到 100 之间的整数",
+    "error.cursor_page_conflict": "cursor 与 page 不能同时使用",
+    "error.invalid_user_input": "用户输入不合法",
+    "error.internal": "系统内部错误"
+  }
+}
